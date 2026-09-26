@@ -246,3 +246,5 @@ Vercel plus any hosted Postgres (Neon, Supabase, RDS):
 3. `postinstall` already runs `prisma generate`. Run `npm run db:deploy` once
    against the production database, and `npm run db:seed` if you want the demo
    data there too.
+
+4. done.   
