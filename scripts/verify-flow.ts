@@ -125,6 +125,18 @@ async function main() {
     );
     createdPickings.push(delivery.id);
 
+    // The problem statement's delivery flow: pick, then pack, then validate.
+    await pickings.markPickingStage(delivery.id, "picked");
+    let staged = await prisma.picking.findUniqueOrThrow({ where: { id: delivery.id } });
+    check("marking picked records a timestamp", staged.pickedAt !== null, true);
+    check("packing has not happened yet", staged.packedAt, null);
+
+    await pickings.markPickingStage(delivery.id, "packed");
+    staged = await prisma.picking.findUniqueOrThrow({ where: { id: delivery.id } });
+    check("marking packed records a timestamp", staged.packedAt !== null, true);
+
+    check("no stock moved during pick or pack", await onHand(product.id, production.id), 100);
+
     await pickings.validatePicking(user.id, delivery.id);
     check("WH/Production holds 80", await onHand(product.id, production.id), 80);
     check("customer location shows 20", await onHand(product.id, customers.id), 20);
@@ -234,6 +246,15 @@ async function main() {
       badRouteRefused = error instanceof StockError;
     }
     check("a receipt from a real location is refused", badRouteRefused, true);
+
+    // Pick and pack belong to deliveries only.
+    let pickOnReceiptRefused = false;
+    try {
+      await pickings.markPickingStage(receipt.id, "picked");
+    } catch (error) {
+      pickOnReceiptRefused = error instanceof StockError;
+    }
+    check("picking a receipt is refused", pickOnReceiptRefused, true);
 
     // Counting a virtual location makes no physical sense.
     let virtualCountRefused = false;

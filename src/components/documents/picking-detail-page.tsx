@@ -1,5 +1,5 @@
-import { DocStatus } from "@prisma/client";
-import { ArrowRight, CircleDot } from "lucide-react";
+import { DocStatus, PickingType } from "@prisma/client";
+import { ArrowRight, CheckCircle2, Circle } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -12,38 +12,66 @@ import { EmptyRow, TBody, TD, TH, THead, TR, Table, TableShell } from "@/compone
 import { formatDate, formatDateTime, formatQty } from "@/lib/utils";
 import { getPicking } from "@/server/queries/documents";
 
-/** Draft → Waiting/Ready → Done, shown as a strip so the state is obvious. */
-const FLOW: DocStatus[] = [DocStatus.DRAFT, DocStatus.READY, DocStatus.DONE];
+type FlowStep = { label: string; done: boolean };
 
-function StatusFlow({ status }: { status: DocStatus }) {
-  if (status === DocStatus.CANCELED) return null;
-  const current = status === DocStatus.WAITING ? DocStatus.DRAFT : status;
-  const reached = FLOW.indexOf(current);
+/**
+ * The document's progress as a strip.
+ *
+ * A delivery is picked, then packed, then validated — the three steps the
+ * problem statement describes. Receipts and transfers have no preparation
+ * stage, so they get the shorter Draft → Ready → Done.
+ */
+function buildFlow(
+  type: PickingType,
+  status: DocStatus,
+  pickedAt: Date | null,
+  packedAt: Date | null,
+): FlowStep[] {
+  const isDone = status === DocStatus.DONE;
 
+  if (type === PickingType.DELIVERY) {
+    return [
+      { label: "Draft", done: true },
+      { label: "Picked", done: isDone || Boolean(pickedAt) },
+      { label: "Packed", done: isDone || Boolean(packedAt) },
+      { label: "Shipped", done: isDone },
+    ];
+  }
+
+  return [
+    { label: "Draft", done: true },
+    {
+      label: status === DocStatus.WAITING ? "Waiting" : "Ready",
+      done: isDone || status === DocStatus.READY,
+    },
+    { label: type === PickingType.RECEIPT ? "Received" : "Transferred", done: isDone },
+  ];
+}
+
+function StatusFlow({ steps }: { steps: FlowStep[] }) {
   return (
-    <ol className="flex items-center gap-1.5 text-xs">
-      {FLOW.map((step, index) => {
-        const done = index <= reached;
-        const label =
-          step === DocStatus.READY && status === DocStatus.WAITING ? "Waiting" : step;
-        return (
-          <li key={step} className="flex items-center gap-1.5">
-            <span
-              className={
-                done
-                  ? "flex items-center gap-1 rounded-full bg-primary-subtle px-2 py-0.5 font-medium text-primary"
-                  : "flex items-center gap-1 rounded-full bg-surface-muted px-2 py-0.5 text-muted-foreground"
-              }
-            >
-              <CircleDot className="size-3" aria-hidden />
-              {label.charAt(0) + label.slice(1).toLowerCase()}
-            </span>
-            {index < FLOW.length - 1 ? (
-              <ArrowRight className="size-3 text-muted-foreground" aria-hidden />
-            ) : null}
-          </li>
-        );
-      })}
+    <ol className="flex flex-wrap items-center gap-1.5 text-xs">
+      {steps.map((step, index) => (
+        <li key={step.label} className="flex items-center gap-1.5">
+          <span
+            className={
+              step.done
+                ? "flex items-center gap-1 rounded-full bg-primary-subtle px-2 py-0.5 font-medium text-primary"
+                : "flex items-center gap-1 rounded-full bg-surface-muted px-2 py-0.5 text-muted-foreground"
+            }
+          >
+            {step.done ? (
+              <CheckCircle2 className="size-3" aria-hidden />
+            ) : (
+              <Circle className="size-3" aria-hidden />
+            )}
+            {step.label}
+          </span>
+          {index < steps.length - 1 ? (
+            <ArrowRight className="size-3 text-muted-foreground" aria-hidden />
+          ) : null}
+        </li>
+      ))}
     </ol>
   );
 }
@@ -80,7 +108,16 @@ export async function PickingDetailPage({
         description={
           <span className="flex flex-wrap items-center gap-2">
             <StatusBadge status={document.status} />
-            <StatusFlow status={document.status} />
+            {document.status === DocStatus.CANCELED ? null : (
+              <StatusFlow
+                steps={buildFlow(
+                  document.type,
+                  document.status,
+                  document.pickedAt,
+                  document.packedAt,
+                )}
+              />
+            )}
           </span>
         }
         actions={
@@ -90,7 +127,13 @@ export async function PickingDetailPage({
         }
       />
 
-      <PickingActions id={document.id} status={document.status} config={config} />
+      <PickingActions
+        id={document.id}
+        status={document.status}
+        config={config}
+        pickedAt={document.pickedAt}
+        packedAt={document.packedAt}
+      />
 
       <div className="grid gap-5 lg:grid-cols-[1fr_20rem]">
         <div className="space-y-5">
@@ -211,6 +254,16 @@ export async function PickingDetailPage({
               <Detail label={config.sourceLabel}>{document.sourceLocation.name}</Detail>
               <Detail label={config.destLabel}>{document.destLocation.name}</Detail>
               <Detail label="Scheduled">{formatDate(document.scheduledAt)}</Detail>
+              {document.type === PickingType.DELIVERY ? (
+                <>
+                  <Detail label="Picked">
+                    {document.pickedAt ? formatDateTime(document.pickedAt) : "Not yet"}
+                  </Detail>
+                  <Detail label="Packed">
+                    {document.packedAt ? formatDateTime(document.packedAt) : "Not yet"}
+                  </Detail>
+                </>
+              ) : null}
               <Detail label="Validated">
                 {document.validatedAt ? formatDateTime(document.validatedAt) : "Not yet"}
               </Detail>

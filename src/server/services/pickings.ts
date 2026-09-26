@@ -258,6 +258,38 @@ export function validatePicking(userId: string, id: string) {
   });
 }
 
+/**
+ * The two preparation steps a delivery goes through before it is validated:
+ * items are picked off the shelf, then packed for despatch.
+ *
+ * Neither moves stock — that only happens at validation — so they are recorded
+ * as timestamps rather than statuses. Marking a step is idempotent, and
+ * packing implies picking, so a warehouse that does both at once can press one
+ * button.
+ */
+export async function markPickingStage(id: string, stage: "picked" | "packed") {
+  const picking = await prisma.picking.findUniqueOrThrow({
+    where: { id },
+    select: { status: true, type: true, pickedAt: true },
+  });
+
+  if (picking.type !== PickingType.DELIVERY) {
+    throw new StockError("Picking and packing apply to delivery orders only.");
+  }
+  assertPickingEditable(picking.status);
+
+  const now = new Date();
+  await prisma.picking.update({
+    where: { id },
+    data:
+      stage === "picked"
+        ? { pickedAt: now }
+        : { packedAt: now, pickedAt: picking.pickedAt ?? now },
+  });
+
+  return picking.type;
+}
+
 export async function cancelPicking(id: string) {
   const picking = await prisma.picking.findUniqueOrThrow({
     where: { id },
