@@ -27,7 +27,10 @@ function readProductInput(formData: FormData) {
     categoryId: field(formData, "categoryId"),
     costPrice: field(formData, "costPrice"),
     salePrice: field(formData, "salePrice"),
-    isActive: formData.get("isActive") === null ? true : formData.get("isActive") === "on",
+    // An unchecked checkbox submits nothing at all. Treating "absent" as true
+    // meant the box could be ticked but never cleared; the form always renders
+    // it, so absent genuinely means unchecked.
+    isActive: formData.get("isActive") === "on",
   });
 }
 
