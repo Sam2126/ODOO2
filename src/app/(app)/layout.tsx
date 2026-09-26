@@ -3,19 +3,27 @@ import { requireUser } from "@/lib/auth";
 import { logoutAction } from "@/server/actions/auth";
 import { listProductsNeedingReorder } from "@/server/queries/products";
 
-export default async function AppLayout({ children }: LayoutProps<"/">) {
-  // Middleware already turned anonymous visitors away; this is the second gate
-  // that makes every page under (app) safe on its own.
-  const user = await requireUser();
-  const needingReorder = await listProductsNeedingReorder();
+export default async function AppLayout({
+children,
+}: LayoutProps<"/">) {
+// Protect the entire application section at the server level.
+const user = await requireUser();
 
-  return (
-    <AppShell
-      user={{ name: user.name, email: user.email, role: user.role }}
-      lowStockCount={needingReorder.length}
-      logoutAction={logoutAction}
-    >
-      {children}
-    </AppShell>
-  );
+const [needingReorder] = await Promise.all([
+listProductsNeedingReorder(),
+]);
+
+const userData = {
+name: user.name,
+email: user.email,
+role: user.role,
+};
+
+return ( <AppShell
+   user={userData}
+   lowStockCount={needingReorder.length}
+   logoutAction={logoutAction}
+ >
+{children} </AppShell>
+);
 }
