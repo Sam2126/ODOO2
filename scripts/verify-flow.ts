@@ -17,6 +17,7 @@ import { LocationType, PickingType } from "@prisma/client";
 
 import { prisma } from "../src/lib/db";
 import { StockError } from "../src/lib/errors";
+import { pickingPrefix } from "../src/lib/refs";
 import { VIRTUAL_LOCATION } from "../src/lib/stock";
 import * as adjustments from "../src/server/services/adjustments";
 import * as pickings from "../src/server/services/pickings";
@@ -293,6 +294,29 @@ async function main() {
     }
     await prisma.product.update({ where: { id: product.id }, data: { isActive: true } });
     check("an archived product cannot be added to a document", archivedRefused, true);
+
+    // A counter that has fallen behind the documents — after restoring a dump,
+    // or reseeding on top of existing rows — must not collide.
+    await prisma.documentSequence.deleteMany({
+      where: { prefix: pickingPrefix(PickingType.RECEIPT, warehouse.code) },
+    });
+    const afterReset = await pickings.createPicking(
+      user.id,
+      {
+        type: PickingType.RECEIPT,
+        warehouseId: warehouse.id,
+        sourceLocationId: vendors.id,
+        destLocationId: stock.id,
+        scheduledAt: new Date(),
+      },
+      [{ productId: product.id, demandQty: 1 }],
+    );
+    createdPickings.push(afterReset.id);
+    check(
+      "a reset counter does not reuse an existing reference",
+      afterReset.reference !== receipt.reference,
+      true,
+    );
 
     // Pick and pack belong to deliveries only.
     let pickOnReceiptRefused = false;
