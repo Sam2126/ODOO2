@@ -1,0 +1,8 @@
+# One line ending everywhere. Without this, Windows checkouts commit CRLF and
+# every file looks fully rewritten in the diff on a Mac or in CI.
+* text=auto eol=lf
+
+*.ico binary
+*.pdf binary
+*.png binary
+*.jpg binary
