@@ -101,6 +101,14 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
           allLabel="Active only"
           options={[{ value: "1", label: "Include archived" }]}
         />
+        {activeFilters > 0 ? (
+  <Link
+    href="/products"
+    className="text-sm font-medium text-primary hover:underline"
+  >
+    Clear filters
+  </Link>
+) : null}
       </FilterBar>
 
       {products.length === 0 && activeFilters === 0 ? (
