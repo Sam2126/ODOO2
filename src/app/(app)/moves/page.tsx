@@ -141,7 +141,7 @@ export default async function MovesPage({ searchParams }: PageProps<"/moves">) {
                         {href ? (
                           <Link
                             href={href}
-                            className="tabular font-mono text-xs font-medium text-primary hover:underline"
+                            className="tabular font-mono text-xs font-medium text-accent hover:underline"
                           >
                             {move.reference}
                           </Link>
@@ -154,7 +154,7 @@ export default async function MovesPage({ searchParams }: PageProps<"/moves">) {
                       <TD>
                         <Link
                           href={`/products/${move.productId}`}
-                          className="font-medium hover:text-primary hover:underline"
+                          className="font-medium hover:text-accent hover:underline"
                         >
                           {move.productName}
                         </Link>

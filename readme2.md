@@ -785,13 +785,31 @@ Both ends are real locations. Total on-hand is unchanged — only the location m
 
 ## 15. Design system
 
-**Colour** — OKLCH tokens on `:root`, redefined under `.dark`, exposed through
-`@theme inline`. A deliberately industrial teal primary, kept distinct from the
-green/amber/red used for status.
+**Colour** — warm bone paper, warm ink, and brass. OKLCH tokens on `:root`,
+redefined under `.dark`, exposed through `@theme inline`.
 
-**Typography** — Geist Sans and Geist Mono via `next/font/google`. Mono for
-SKUs, references and quantities; `.tabular` applies `font-variant-numeric:
+The neutrals carry a little yellow rather than the usual blue, which is what
+stops a dense data screen reading cold. There are **two** emphasis colours
+rather than one: **ink** for anything solid you press, and **brass** for
+anything live — the current page, a link, a focus ring. Keeping those apart
+means a screen full of tables has exactly one warm highlight drawing the eye.
+In dark mode the solid button inverts to light-on-dark and the brass lifts.
+
+Status keeps its own family (green / amber / red), desaturated so it reads as
+information rather than decoration.
+
+Every foreground/background pair was checked against WCAG: **all pass AA in
+both themes**, most at AAA. The brass and amber were darkened in light mode
+specifically to clear 4.5:1.
+
+**Typography** — three faces with distinct jobs. **Instrument Serif** for page
+titles and the wordmark only, so the serif reads as a masthead rather than
+decoration; **Geist Sans** for everything operational; **Geist Mono** for SKUs,
+references and quantities, with `.tabular` applying `font-variant-numeric:
 tabular-nums` so columns of digits do not jitter.
+
+**Depth** — two soft layered shadows and hairline borders. Cards and tables use
+a 12px radius, controls 8px.
 
 **Dark mode** — class-based on `<html>`, defaulting to the OS preference, with an
 inline script applying it before first paint.

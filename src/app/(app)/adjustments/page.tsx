@@ -104,7 +104,7 @@ export default async function AdjustmentsPage({ searchParams }: PageProps<"/adju
                     <TD>
                       <Link
                         href={`/adjustments/${adjustment.id}`}
-                        className="tabular font-mono text-[0.8125rem] font-medium text-primary hover:underline"
+                        className="tabular font-mono text-[0.8125rem] font-medium text-accent hover:underline"
                       >
                         {adjustment.reference}
                       </Link>

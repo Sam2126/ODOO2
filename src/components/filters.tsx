@@ -57,7 +57,7 @@ export function FilterSelect({
         value={value}
         disabled={isPending}
         onChange={(event) => apply(name, event.target.value)}
-        className="h-8 text-[0.8125rem]"
+        className="h-9 text-[0.8125rem]"
       >
         <option value="">{allLabel}</option>
         {options.map((option) => (
@@ -117,7 +117,7 @@ export function SearchInput({
           value={value}
           placeholder={placeholder}
           onChange={(event) => setValue(event.target.value)}
-          className="h-8 w-full rounded-md border border-border bg-surface pr-3 pl-8 text-[0.8125rem] text-foreground placeholder:text-muted-foreground/70 hover:border-border-strong"
+          className="h-9 w-full rounded-lg border border-border bg-surface pr-3 pl-8 text-[0.8125rem] text-foreground placeholder:text-muted-foreground/60 hover:border-border-strong"
         />
       </span>
     </label>
@@ -145,7 +145,7 @@ export function DateFilter({
         type="date"
         value={value}
         onChange={(event) => apply(name, event.target.value)}
-        className="h-8 rounded-md border border-border bg-surface px-2 text-[0.8125rem] text-foreground hover:border-border-strong"
+        className="h-9 rounded-lg border border-border bg-surface px-2.5 text-[0.8125rem] text-foreground hover:border-border-strong"
       />
     </label>
   );
@@ -161,7 +161,7 @@ export function FilterBar({
   basePath: string;
 }) {
   return (
-    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface px-4 py-3">
+    <div className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface px-5 py-4 shadow-[var(--shadow-sm)]">
       {children}
       {activeCount > 0 ? (
         <Link

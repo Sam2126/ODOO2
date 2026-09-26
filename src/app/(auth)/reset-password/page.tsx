@@ -92,7 +92,7 @@ export default function ResetPasswordPage() {
 
       <p className="text-sm text-muted-foreground">
         Need a new code?{" "}
-        <Link href="/forgot-password" className="font-medium text-primary hover:underline">
+        <Link href="/forgot-password" className="font-medium text-accent hover:underline">
           Request one
         </Link>
       </p>

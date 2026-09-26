@@ -56,7 +56,7 @@ function StatusFlow({ steps }: { steps: FlowStep[] }) {
           <span
             className={
               step.done
-                ? "flex items-center gap-1 rounded-full bg-primary-subtle px-2 py-0.5 font-medium text-primary"
+                ? "flex items-center gap-1 rounded-full bg-accent-subtle px-2 py-0.5 font-medium text-accent"
                 : "flex items-center gap-1 rounded-full bg-surface-muted px-2 py-0.5 text-muted-foreground"
             }
           >
@@ -168,7 +168,7 @@ export async function PickingDetailPage({
                         <TD className="font-medium">
                           <Link
                             href={`/products/${line.productId}`}
-                            className="hover:text-primary hover:underline"
+                            className="hover:text-accent hover:underline"
                           >
                             {line.name}
                           </Link>

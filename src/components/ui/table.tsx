@@ -11,7 +11,7 @@ export function TableShell({ className, children }: { className?: string; childr
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-lg border border-border bg-surface",
+        "overflow-hidden rounded-xl border border-border bg-surface shadow-[var(--shadow-sm)]",
         className,
       )}
     >
@@ -37,7 +37,7 @@ export function TH({ className, ...props }: ComponentProps<"th">) {
   return (
     <th
       className={cn(
-        "px-4 py-2.5 text-left text-xs font-semibold tracking-wide text-muted-foreground uppercase whitespace-nowrap",
+        "px-5 py-3 text-left text-[0.6875rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase whitespace-nowrap",
         className,
       )}
       {...props}
@@ -50,11 +50,11 @@ export function TBody({ className, ...props }: ComponentProps<"tbody">) {
 }
 
 export function TR({ className, ...props }: ComponentProps<"tr">) {
-  return <tr className={cn("transition-colors hover:bg-surface-muted/50", className)} {...props} />;
+  return <tr className={cn("transition-colors hover:bg-surface-muted/60", className)} {...props} />;
 }
 
 export function TD({ className, ...props }: ComponentProps<"td">) {
-  return <td className={cn("px-4 py-2.5 align-middle", className)} {...props} />;
+  return <td className={cn("px-5 py-3 align-middle", className)} {...props} />;
 }
 
 export function EmptyRow({ colSpan, children }: { colSpan: number; children: ReactNode }) {
