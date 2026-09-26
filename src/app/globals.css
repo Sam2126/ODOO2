@@ -1,26 +1,130 @@
 @import "tailwindcss";
 
+/* Dark mode is driven by a class on <html> so the in-app toggle can override
+   the operating system preference. The inline script in the root layout sets
+   it before first paint. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: oklch(0.984 0.003 247);
+  --surface: oklch(1 0 0);
+  --surface-muted: oklch(0.966 0.005 247);
+  --foreground: oklch(0.216 0.017 255);
+  --muted-foreground: oklch(0.521 0.019 256);
+  --border: oklch(0.912 0.008 250);
+  --border-strong: oklch(0.845 0.012 251);
+
+  /* Teal reads as industrial rather than corporate-blue, and stays distinct
+     from the green/amber/red used for document and stock status. */
+  --primary: oklch(0.512 0.093 196);
+  --primary-hover: oklch(0.452 0.089 196);
+  --primary-foreground: oklch(0.995 0 0);
+  --primary-subtle: oklch(0.955 0.024 196);
+
+  --success: oklch(0.503 0.109 155);
+  --success-subtle: oklch(0.955 0.035 155);
+  --warning: oklch(0.556 0.108 74);
+  --warning-subtle: oklch(0.962 0.042 85);
+  --danger: oklch(0.523 0.179 25);
+  --danger-subtle: oklch(0.958 0.026 25);
+
+  --ring: oklch(0.512 0.093 196 / 0.45);
+}
+
+.dark {
+  --background: oklch(0.174 0.014 257);
+  --surface: oklch(0.214 0.016 257);
+  --surface-muted: oklch(0.253 0.017 257);
+  --foreground: oklch(0.944 0.005 247);
+  --muted-foreground: oklch(0.687 0.016 257);
+  --border: oklch(0.297 0.018 257);
+  --border-strong: oklch(0.379 0.021 257);
+
+  --primary: oklch(0.742 0.109 191);
+  --primary-hover: oklch(0.798 0.104 191);
+  --primary-foreground: oklch(0.174 0.014 257);
+  --primary-subtle: oklch(0.286 0.045 195);
+
+  --success: oklch(0.742 0.123 155);
+  --success-subtle: oklch(0.284 0.046 155);
+  --warning: oklch(0.785 0.118 80);
+  --warning-subtle: oklch(0.302 0.047 78);
+  --danger: oklch(0.687 0.152 24);
+  --danger-subtle: oklch(0.303 0.061 24);
+
+  --ring: oklch(0.742 0.109 191 / 0.5);
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-subtle: var(--primary-subtle);
+
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-danger: var(--danger);
+  --color-danger-subtle: var(--danger-subtle);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+
+  /* SKUs, references and quantities line up in columns; proportional digits
+     make those columns jitter. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  /* Used by the sidebar and long tables. */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
