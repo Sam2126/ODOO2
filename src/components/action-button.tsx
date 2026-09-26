@@ -18,11 +18,10 @@ import { cn } from "@/lib/utils";
 const ResultContext = createContext<(state: FormState | null) => void>(() => {});
 
 /**
- * Wraps a row of action buttons and owns the one place their result is shown.
+ * Wraps a row of action buttons and displays the result directly above them.
  *
- * The alternative — a global toast — hides the message somewhere else on the
- * page, and these messages ("Not enough stock in WH/Stock") are the reason the
- * user pressed the button.
+ * This keeps action feedback close to the action that produced it instead of
+ * hiding it in a global toast.
  */
 export function ActionGroup({
   children,
@@ -37,18 +36,26 @@ export function ActionGroup({
     <ResultContext.Provider value={setResult}>
       <div className="space-y-3">
         {result?.message ? (
-          <Alert tone={result.status === "error" ? "error" : "success"}>{result.message}</Alert>
+          <Alert tone={result.status === "error" ? "error" : "success"}>
+            {result.message}
+          </Alert>
         ) : null}
-        <div className={cn("flex flex-wrap items-center gap-2", className)}>{children}</div>
+
+        <div className={cn("flex flex-wrap items-center gap-2", className)}>
+          {children}
+        </div>
       </div>
     </ResultContext.Provider>
   );
 }
 
-type ActionButtonProps = Omit<ComponentProps<typeof Button>, "onClick" | "type"> & {
+type ActionButtonProps = Omit<
+  ComponentProps<typeof Button>,
+  "onClick" | "type"
+> & {
   action: (id: string) => Promise<FormState>;
   id: string;
-  /** When set, the button asks once before running. */
+  /** When set, the button asks for confirmation before running. */
   confirm?: string;
   pendingLabel?: string;
 };
@@ -71,7 +78,12 @@ export function ActionButton({
       setArmed(true);
       return;
     }
+
     setArmed(false);
+
+    // Clear the previous result while the new action is running.
+    setResult(null);
+
     startTransition(async () => {
       // A redirecting action never returns; Next handles the navigation.
       const result = await action(id);
@@ -88,8 +100,15 @@ export function ActionButton({
       className={cn(armed && "ring-2 ring-danger/40", className)}
       {...props}
     >
-      {isPending ? <Loader2 className="animate-spin" aria-hidden /> : null}
-      {isPending ? (pendingLabel ?? children) : armed ? confirm : children}
+      {isPending ? (
+        <Loader2 className="animate-spin" aria-hidden="true" />
+      ) : null}
+
+      {isPending
+        ? (pendingLabel ?? children)
+        : armed
+          ? confirm
+          : children}
     </Button>
   );
 }
