@@ -5,58 +5,85 @@
    it before first paint. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+  Palette: warm bone paper, warm ink, and brass.
+
+  The neutrals carry a little yellow rather than the usual blue, which is what
+  stops a dense data screen reading cold and clinical. There are two emphasis
+  colours rather than one: ink for anything solid you press, and brass for
+  anything live — the current page, a link, a focus ring. Keeping those apart
+  means a screen full of tables has exactly one warm highlight drawing the eye.
+
+  Status keeps its own family (green / amber / red), deliberately desaturated
+  so it reads as information rather than decoration.
+*/
 :root {
-  --background: oklch(0.984 0.003 247);
-  --surface: oklch(1 0 0);
-  --surface-muted: oklch(0.966 0.005 247);
-  --foreground: oklch(0.216 0.017 255);
-  --muted-foreground: oklch(0.521 0.019 256);
-  --border: oklch(0.912 0.008 250);
-  --border-strong: oklch(0.845 0.012 251);
+  --paper: oklch(0.977 0.006 85);
+  --surface: oklch(0.995 0.003 85);
+  --surface-muted: oklch(0.953 0.008 84);
+  --foreground: oklch(0.205 0.012 62);
+  --muted-foreground: oklch(0.498 0.013 72);
+  --border: oklch(0.906 0.008 82);
+  --border-strong: oklch(0.828 0.012 80);
 
-  /* Teal reads as industrial rather than corporate-blue, and stays distinct
-     from the green/amber/red used for document and stock status. */
-  --primary: oklch(0.512 0.093 196);
-  --primary-hover: oklch(0.452 0.089 196);
-  --primary-foreground: oklch(0.995 0 0);
-  --primary-subtle: oklch(0.955 0.024 196);
+  /* Ink — solid buttons, the brand mark. */
+  --primary: oklch(0.252 0.017 64);
+  --primary-hover: oklch(0.182 0.014 62);
+  --primary-foreground: oklch(0.982 0.005 85);
 
-  --success: oklch(0.503 0.109 155);
-  --success-subtle: oklch(0.955 0.035 155);
-  --warning: oklch(0.556 0.108 74);
-  --warning-subtle: oklch(0.962 0.042 85);
-  --danger: oklch(0.523 0.179 25);
-  --danger-subtle: oklch(0.958 0.026 25);
+  /* Brass — the current page, links, focus. Used sparingly, and never as a
+     fill behind long text. */
+  --accent: oklch(0.508 0.082 74);
+  --accent-hover: oklch(0.442 0.074 74);
+  --accent-foreground: oklch(0.985 0.004 85);
+  --accent-subtle: oklch(0.948 0.031 84);
 
-  --ring: oklch(0.512 0.093 196 / 0.45);
+  --success: oklch(0.472 0.083 152);
+  --success-subtle: oklch(0.952 0.029 152);
+  --warning: oklch(0.505 0.090 70);
+  --warning-subtle: oklch(0.955 0.038 82);
+  --danger: oklch(0.492 0.137 27);
+  --danger-subtle: oklch(0.955 0.024 27);
+
+  /* Two soft, layered shadows. Anything heavier reads as cheap. */
+  --shadow-sm: 0 1px 2px oklch(0.205 0.012 62 / 0.05);
+  --shadow-md: 0 1px 2px oklch(0.205 0.012 62 / 0.04), 0 4px 12px oklch(0.205 0.012 62 / 0.06);
+  --shadow-lg: 0 2px 4px oklch(0.205 0.012 62 / 0.04), 0 12px 32px oklch(0.205 0.012 62 / 0.09);
 }
 
 .dark {
-  --background: oklch(0.174 0.014 257);
-  --surface: oklch(0.214 0.016 257);
-  --surface-muted: oklch(0.253 0.017 257);
-  --foreground: oklch(0.944 0.005 247);
-  --muted-foreground: oklch(0.687 0.016 257);
-  --border: oklch(0.297 0.018 257);
-  --border-strong: oklch(0.379 0.021 257);
+  --paper: oklch(0.168 0.007 64);
+  --surface: oklch(0.212 0.008 64);
+  --surface-muted: oklch(0.256 0.009 64);
+  --foreground: oklch(0.944 0.006 85);
+  --muted-foreground: oklch(0.688 0.011 76);
+  --border: oklch(0.301 0.010 64);
+  --border-strong: oklch(0.402 0.013 64);
 
-  --primary: oklch(0.742 0.109 191);
-  --primary-hover: oklch(0.798 0.104 191);
-  --primary-foreground: oklch(0.174 0.014 257);
-  --primary-subtle: oklch(0.286 0.045 195);
+  /* Inverted: on a dark ground the solid button is the light one. */
+  --primary: oklch(0.936 0.008 85);
+  --primary-hover: oklch(0.995 0.004 85);
+  --primary-foreground: oklch(0.196 0.010 64);
 
-  --success: oklch(0.742 0.123 155);
-  --success-subtle: oklch(0.284 0.046 155);
-  --warning: oklch(0.785 0.118 80);
-  --warning-subtle: oklch(0.302 0.047 78);
-  --danger: oklch(0.687 0.152 24);
-  --danger-subtle: oklch(0.303 0.061 24);
+  --accent: oklch(0.762 0.095 80);
+  --accent-hover: oklch(0.822 0.088 80);
+  --accent-foreground: oklch(0.186 0.010 64);
+  --accent-subtle: oklch(0.286 0.038 76);
 
-  --ring: oklch(0.742 0.109 191 / 0.5);
+  --success: oklch(0.722 0.106 154);
+  --success-subtle: oklch(0.282 0.041 154);
+  --warning: oklch(0.782 0.100 80);
+  --warning-subtle: oklch(0.296 0.043 78);
+  --danger: oklch(0.686 0.136 26);
+  --danger-subtle: oklch(0.302 0.055 26);
+
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.3);
+  --shadow-md: 0 1px 2px oklch(0 0 0 / 0.28), 0 4px 12px oklch(0 0 0 / 0.34);
+  --shadow-lg: 0 2px 4px oklch(0 0 0 / 0.3), 0 12px 32px oklch(0 0 0 / 0.44);
 }
 
 @theme inline {
-  --color-background: var(--background);
+  --color-background: var(--paper);
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
   --color-foreground: var(--foreground);
@@ -67,7 +94,15 @@
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
-  --color-primary-subtle: var(--primary-subtle);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-subtle: var(--accent-subtle);
+
+  /* Kept so existing `primary-subtle` usages land on the brass wash rather
+     than on a slab of ink. */
+  --color-primary-subtle: var(--accent-subtle);
 
   --color-success: var(--success);
   --color-success-subtle: var(--success-subtle);
@@ -78,6 +113,11 @@
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-display), Georgia, "Times New Roman", serif;
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
 }
 
 @layer base {
@@ -94,9 +134,22 @@
   }
 
   body {
-    background-color: var(--background);
+    background-color: var(--paper);
     color: var(--foreground);
     font-family: var(--font-sans);
+    /* Slightly open body text; the extra air is most of what makes a dense
+       screen feel comfortable rather than cramped. */
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Page titles and the wordmark only. Everything operational stays sans, so
+     the serif reads as a masthead rather than as decoration. */
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.005em;
   }
 
   /* SKUs, references and quantities line up in columns; proportional digits
@@ -106,13 +159,18 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--primary);
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background: var(--accent-subtle);
+    color: var(--foreground);
   }
 }
 
 @layer utilities {
-  /* Used by the sidebar and long tables. */
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: var(--border-strong) transparent;

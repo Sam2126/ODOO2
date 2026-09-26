@@ -49,9 +49,9 @@ export function AppShell({ user, lowStockCount, logoutAction, children }: AppShe
                     // Navigating on a phone should close the drawer behind you.
                     onClick={() => setMobileOpen(false)}
                     className={cn(
-                      "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                      "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                       active
-                        ? "bg-primary-subtle text-primary"
+                        ? "bg-accent-subtle text-accent shadow-[inset_2px_0_0_var(--accent)]"
                         : "text-muted-foreground hover:bg-surface-muted hover:text-foreground",
                     )}
                   >
@@ -68,11 +68,11 @@ export function AppShell({ user, lowStockCount, logoutAction, children }: AppShe
   );
 
   const brand = (
-    <div className="flex h-14 items-center gap-2.5 border-b border-border px-5">
+    <div className="flex h-16 items-center gap-2.5 border-b border-border px-5">
       <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
         <Boxes className="size-4" aria-hidden />
       </span>
-      <span className="text-[0.9375rem] font-semibold tracking-tight">StockSense</span>
+      <span className="font-display text-xl leading-none">StockSense</span>
     </div>
   );
 
@@ -139,7 +139,7 @@ export function AppShell({ user, lowStockCount, logoutAction, children }: AppShe
       ) : null}
 
       <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-background/85 px-4 backdrop-blur sm:px-6">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border bg-background/80 px-4 backdrop-blur-md sm:px-6">
           <Button
             variant="ghost"
             size="icon"
@@ -165,8 +165,8 @@ export function AppShell({ user, lowStockCount, logoutAction, children }: AppShe
           <ThemeToggle />
         </header>
 
-        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
-          <div className="mx-auto w-full max-w-7xl space-y-6">{children}</div>
+        <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10">
+          <div className="mx-auto w-full max-w-7xl space-y-7">{children}</div>
         </main>
       </div>
     </div>

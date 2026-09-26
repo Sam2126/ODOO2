@@ -7,7 +7,7 @@ type Tone = "neutral" | "primary" | "warning" | "danger" | "success";
 
 const TONE_RING: Record<Tone, string> = {
   neutral: "bg-surface-muted text-muted-foreground",
-  primary: "bg-primary-subtle text-primary",
+  primary: "bg-accent-subtle text-accent",
   warning: "bg-warning-subtle text-warning",
   danger: "bg-danger-subtle text-danger",
   success: "bg-success-subtle text-success",
@@ -38,16 +38,16 @@ export function KpiTile({
           <Icon className="size-4" aria-hidden />
         </span>
       </div>
-      <p className="tabular mt-3 text-3xl leading-none font-semibold tracking-tight">{value}</p>
+      <p className="tabular mt-3.5 font-display text-4xl leading-none">{value}</p>
       {caption ? <p className="mt-1.5 text-xs text-muted-foreground">{caption}</p> : null}
     </>
   );
 
   const className =
-    "block rounded-lg border border-border bg-surface px-4 py-3.5 transition-colors";
+    "block rounded-xl border border-border bg-surface px-5 py-4 shadow-[var(--shadow-sm)] transition-all";
 
   return href ? (
-    <Link href={href} className={cn(className, "hover:border-border-strong hover:bg-surface-muted/40")}>
+    <Link href={href} className={cn(className, "hover:border-border-strong hover:shadow-[var(--shadow-md)]")}>
       {body}
     </Link>
   ) : (

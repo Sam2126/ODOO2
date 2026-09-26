@@ -149,7 +149,7 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
                       <TD>
                         <Link
                           href={`/products/${product.id}`}
-                          className="font-medium hover:text-primary hover:underline"
+                          className="font-medium hover:text-accent hover:underline"
                         >
                           {product.name}
                         </Link>

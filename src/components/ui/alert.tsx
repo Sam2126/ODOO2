@@ -18,7 +18,7 @@ const TONES = {
   },
   info: {
     icon: Info,
-    className: "border-primary/25 bg-primary-subtle text-primary",
+    className: "border-primary/25 bg-accent-subtle text-accent",
   },
 } as const;
 
@@ -36,7 +36,7 @@ export function Alert({
     <div
       role={tone === "error" ? "alert" : "status"}
       className={cn(
-        "flex items-start gap-2.5 rounded-md border px-3.5 py-2.5 text-sm",
+        "flex items-start gap-2.5 rounded-lg border px-4 py-3 text-sm",
         toneClass,
         className,
       )}

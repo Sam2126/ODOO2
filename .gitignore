@@ -41,3 +41,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Next.js writes these for editor tooling. agentRules:false in next.config.ts
+# stops that, but ignore them so an older Next cannot slip them into a commit.
+AGENTS.md
+CLAUDE.md

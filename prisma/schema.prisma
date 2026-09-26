@@ -196,6 +196,12 @@ model Picking {
   warehouseId      String
   warehouse        Warehouse   @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
   scheduledAt      DateTime    @default(now())
+  // A delivery is picked off the shelf, then packed, then validated — the
+  // three steps the problem statement describes. They are progress markers
+  // inside READY rather than extra statuses, because the status list the
+  // dashboard filters by is fixed at Draft/Waiting/Ready/Done/Canceled.
+  pickedAt         DateTime?
+  packedAt         DateTime?
   validatedAt      DateTime?
   note             String?
   createdById      String

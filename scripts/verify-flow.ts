@@ -125,6 +125,18 @@ async function main() {
     );
     createdPickings.push(delivery.id);
 
+    // The problem statement's delivery flow: pick, then pack, then validate.
+    await pickings.markPickingStage(delivery.id, "picked");
+    let staged = await prisma.picking.findUniqueOrThrow({ where: { id: delivery.id } });
+    check("marking picked records a timestamp", staged.pickedAt !== null, true);
+    check("packing has not happened yet", staged.packedAt, null);
+
+    await pickings.markPickingStage(delivery.id, "packed");
+    staged = await prisma.picking.findUniqueOrThrow({ where: { id: delivery.id } });
+    check("marking packed records a timestamp", staged.packedAt !== null, true);
+
+    check("no stock moved during pick or pack", await onHand(product.id, production.id), 100);
+
     await pickings.validatePicking(user.id, delivery.id);
     check("WH/Production holds 80", await onHand(product.id, production.id), 80);
     check("customer location shows 20", await onHand(product.id, customers.id), 20);
@@ -235,6 +247,62 @@ async function main() {
     }
     check("a receipt from a real location is refused", badRouteRefused, true);
 
+    // The problem statement lists Warehouse 1 -> Warehouse 2 as an internal
+    // transfer, so a destination in another warehouse must be accepted.
+    const wh2 = await prisma.warehouse.findUnique({ where: { code: "WH2" } });
+    if (wh2) {
+      const stock2 = await prisma.location.findUnique({
+        where: { warehouseId_code: { warehouseId: wh2.id, code: "STOCK" } },
+      });
+      if (stock2) {
+        const crossWarehouse = await pickings.createPicking(
+          user.id,
+          {
+            type: PickingType.INTERNAL,
+            warehouseId: warehouse.id,
+            sourceLocationId: production.id,
+            destLocationId: stock2.id,
+            scheduledAt: new Date(),
+          },
+          [{ productId: product.id, demandQty: 7 }],
+        );
+        createdPickings.push(crossWarehouse.id);
+        await pickings.validatePicking(user.id, crossWarehouse.id);
+        check("transfer into another warehouse is allowed", await onHand(product.id, stock2.id), 7);
+        check("and leaves the source reduced", await onHand(product.id, production.id), 70);
+      }
+    }
+
+    // Archived products must not be movable.
+    await prisma.product.update({ where: { id: product.id }, data: { isActive: false } });
+    let archivedRefused = false;
+    try {
+      await pickings.createPicking(
+        user.id,
+        {
+          type: PickingType.RECEIPT,
+          warehouseId: warehouse.id,
+          sourceLocationId: vendors.id,
+          destLocationId: stock.id,
+          scheduledAt: new Date(),
+        },
+        [{ productId: product.id, demandQty: 1 }],
+      );
+    } catch (error) {
+      archivedRefused = error instanceof StockError;
+    }
+    await prisma.product.update({ where: { id: product.id }, data: { isActive: true } });
+    check("an archived product cannot be added to a document", archivedRefused, true);
+
+    // Pick and pack belong to deliveries only.
+    let pickOnReceiptRefused = false;
+    try {
+      await pickings.markPickingStage(receipt.id, "picked");
+    } catch (error) {
+      pickOnReceiptRefused = error instanceof StockError;
+    }
+    check("picking a receipt is refused", pickOnReceiptRefused, true);
+
     // Counting a virtual location makes no physical sense.
     let virtualCountRefused = false;
     try {
@@ -254,7 +322,7 @@ async function main() {
       .filter((quant) => quant.location.type === LocationType.INTERNAL)
       .reduce((sum, quant) => sum + quant.quantity.toNumber(), 0);
     check("every location sums to zero", net, 0);
-    check("real locations hold 77", real, 77);
+    check("real locations still total 77 after the cross-warehouse move", real, 77);
   } finally {
     await prisma.adjustment.deleteMany({ where: { id: { in: createdAdjustments } } });
     await prisma.picking.deleteMany({ where: { id: { in: createdPickings } } });

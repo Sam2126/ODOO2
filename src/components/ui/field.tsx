@@ -3,7 +3,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 const controlBase =
-  "w-full rounded-md border bg-surface px-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground/70 disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full rounded-lg border bg-surface px-3.5 text-sm text-foreground transition-colors placeholder:text-muted-foreground/60 disabled:cursor-not-allowed disabled:opacity-60";
 
 const controlState = (invalid?: boolean) =>
   invalid ? "border-danger" : "border-border hover:border-border-strong";
@@ -16,7 +16,7 @@ export function Input({
   return (
     <input
       aria-invalid={invalid || undefined}
-      className={cn(controlBase, controlState(invalid), "h-9", className)}
+      className={cn(controlBase, controlState(invalid), "h-10", className)}
       {...props}
     />
   );
@@ -44,7 +44,7 @@ export function Select({
   return (
     <select
       aria-invalid={invalid || undefined}
-      className={cn(controlBase, controlState(invalid), "h-9 pr-8", className)}
+      className={cn(controlBase, controlState(invalid), "h-10 pr-8", className)}
       {...props}
     />
   );

@@ -48,6 +48,12 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
 
+  // Next 16 writes AGENTS.md and CLAUDE.md into the project root on every dev
+  // start. They are editor tooling, not part of this application, and they
+  // reappear after every delete — so they are switched off rather than
+  // repeatedly removed.
+  agentRules: false,
+
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

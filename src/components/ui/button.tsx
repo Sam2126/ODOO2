@@ -5,13 +5,15 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
 export const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-55 [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg text-sm font-medium whitespace-nowrap transition-[background-color,border-color,color,box-shadow] duration-150 disabled:pointer-events-none disabled:opacity-55 [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        primary: "bg-primary text-primary-foreground hover:bg-primary-hover",
+        primary:
+          "bg-primary text-primary-foreground shadow-[var(--shadow-sm)] hover:bg-primary-hover",
+        accent: "bg-accent text-accent-foreground hover:bg-accent-hover",
         secondary:
-          "border border-border bg-surface text-foreground hover:bg-surface-muted hover:border-border-strong",
+          "border border-border bg-surface text-foreground hover:border-border-strong hover:bg-surface-muted",
         ghost: "text-muted-foreground hover:bg-surface-muted hover:text-foreground",
         danger: "bg-danger text-white hover:brightness-110",
         success: "bg-success text-white hover:brightness-110",

@@ -1,7 +1,16 @@
 "use client";
 
 import type { DocStatus } from "@prisma/client";
-import { CheckCircle2, ClipboardList, Pencil, RotateCcw, Trash2, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  ClipboardList,
+  Hand,
+  Package,
+  Pencil,
+  RotateCcw,
+  Trash2,
+  XCircle,
+} from "lucide-react";
 
 import { ActionButton, ActionGroup } from "@/components/action-button";
 import type { PickingConfig } from "@/components/documents/config";
@@ -11,6 +20,8 @@ import {
   cancelPickingAction,
   checkAvailabilityAction,
   deletePickingAction,
+  markPackedAction,
+  markPickedAction,
   resetPickingToDraftAction,
   validatePickingAction,
 } from "@/server/actions/pickings";
@@ -19,16 +30,48 @@ export function PickingActions({
   id,
   status,
   config,
+  pickedAt,
+  packedAt,
 }: {
   id: string;
   status: DocStatus;
   config: PickingConfig;
+  pickedAt?: Date | null;
+  packedAt?: Date | null;
 }) {
   const editable =
     status === DOC_STATUS.DRAFT || status === DOC_STATUS.WAITING || status === DOC_STATUS.READY;
 
+  // Pick and pack are the two preparation steps a delivery goes through.
+  // Receipts and internal transfers have no equivalent.
+  const showPreparation = editable && config.type === "DELIVERY";
+
   return (
     <ActionGroup>
+      {showPreparation ? (
+        <>
+          <ActionButton
+            action={markPickedAction}
+            id={id}
+            variant={pickedAt ? "ghost" : "secondary"}
+            pendingLabel="Marking…"
+          >
+            <Hand aria-hidden />
+            {pickedAt ? "Picked ✓" : "Mark picked"}
+          </ActionButton>
+
+          <ActionButton
+            action={markPackedAction}
+            id={id}
+            variant={packedAt ? "ghost" : "secondary"}
+            pendingLabel="Marking…"
+          >
+            <Package aria-hidden />
+            {packedAt ? "Packed ✓" : "Mark packed"}
+          </ActionButton>
+        </>
+      ) : null}
+
       {editable ? (
         <>
           <ActionButton

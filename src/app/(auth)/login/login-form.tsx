@@ -52,7 +52,7 @@ export function LoginForm({ next, notice }: { next?: string; notice?: string }) 
         <Link href="/forgot-password" className="text-muted-foreground hover:text-foreground">
           Forgot password?
         </Link>
-        <Link href="/signup" className="font-medium text-primary hover:underline">
+        <Link href="/signup" className="font-medium text-accent hover:underline">
           Create an account
         </Link>
       </div>

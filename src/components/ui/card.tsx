@@ -5,7 +5,10 @@ import { cn } from "@/lib/utils";
 export function Card({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
-      className={cn("rounded-lg border border-border bg-surface", className)}
+      className={cn(
+        "rounded-xl border border-border bg-surface shadow-[var(--shadow-sm)]",
+        className,
+      )}
       {...props}
     />
   );
@@ -25,7 +28,7 @@ export function CardHeader({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4",
+        "flex flex-wrap items-start justify-between gap-3 border-b border-border px-6 py-4",
         className,
       )}
     >
@@ -41,7 +44,7 @@ export function CardHeader({
 }
 
 export function CardBody({ className, ...props }: ComponentProps<"div">) {
-  return <div className={cn("px-5 py-4", className)} {...props} />;
+  return <div className={cn("px-6 py-5", className)} {...props} />;
 }
 
 export function PageHeader({
@@ -54,9 +57,9 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="flex flex-wrap items-end justify-between gap-4 pb-1">
       <div className="min-w-0">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
+        <h1 className="font-display text-[1.75rem] leading-tight text-foreground">{title}</h1>
         {description ? (
           <p className="mt-1 text-sm text-muted-foreground">{description}</p>
         ) : null}

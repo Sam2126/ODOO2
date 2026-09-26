@@ -64,14 +64,21 @@ export async function assertLocationsUsable(
 
   if (locations.length !== 2) throw new StockError("Choose a valid source and destination.");
 
+  const source = locations.find((location) => location.id === sourceLocationId)!;
+  const destination = locations.find((location) => location.id === destLocationId)!;
+
+  // A document belongs to the warehouse it moves stock *out of*, which is what
+  // its reference is numbered from. Every real location on it must be in that
+  // warehouse — except the destination of an internal transfer, because
+  // "Warehouse 1 to Warehouse 2" is a transfer the problem statement asks for.
+  const mayLeaveWarehouse = type === PickingType.INTERNAL;
   for (const location of locations) {
-    if (location.type === LocationType.INTERNAL && location.warehouseId !== warehouseId) {
+    if (location.type !== LocationType.INTERNAL) continue;
+    if (location.id === destLocationId && mayLeaveWarehouse) continue;
+    if (location.warehouseId !== warehouseId) {
       throw new StockError(`${location.name} does not belong to the selected warehouse.`);
     }
   }
-
-  const source = locations.find((location) => location.id === sourceLocationId)!;
-  const destination = locations.find((location) => location.id === destLocationId)!;
 
   if (type === PickingType.RECEIPT && source.type !== LocationType.VENDOR) {
     throw new StockError("A receipt must come from the vendor location.");
@@ -84,6 +91,25 @@ export async function assertLocationsUsable(
     (source.type !== LocationType.INTERNAL || destination.type !== LocationType.INTERNAL)
   ) {
     throw new StockError("An internal transfer moves stock between two real locations.");
+  }
+}
+
+/**
+ * The pickers only ever offer active products, so this guards the path a
+ * tampered form or a script could take. An archived product already on a draft
+ * has to be removed before the draft can be saved again, which is the point:
+ * it should not be moved.
+ */
+export async function assertProductsActive(tx: Tx, productIds: string[]) {
+  const archived = await tx.product.findMany({
+    where: { id: { in: productIds }, isActive: false },
+    select: { name: true, sku: true },
+  });
+  if (archived.length > 0) {
+    const names = archived.map((p) => `${p.name} (${p.sku})`).join(", ");
+    throw new StockError(
+      `Archived and cannot be moved: ${names}. Restore the product or remove the line.`,
+    );
   }
 }
 
@@ -108,6 +134,8 @@ export function createPicking(
       header.sourceLocationId,
       header.destLocationId,
     );
+
+    await assertProductsActive(tx, lines.map((line) => line.productId));
 
     const warehouse = await tx.warehouse.findUniqueOrThrow({
       where: { id: header.warehouseId },
@@ -151,6 +179,8 @@ export function updatePicking(
       header.sourceLocationId,
       header.destLocationId,
     );
+
+    await assertProductsActive(tx, lines.map((line) => line.productId));
 
     // Lines are replaced wholesale: the editor submits the full set, and an
     // unvalidated document has no history worth preserving.
@@ -256,6 +286,38 @@ export function validatePicking(userId: string, id: string) {
 
     return { reference: picking.reference, type: picking.type, moved: moving.length };
   });
+}
+
+/**
+ * The two preparation steps a delivery goes through before it is validated:
+ * items are picked off the shelf, then packed for despatch.
+ *
+ * Neither moves stock — that only happens at validation — so they are recorded
+ * as timestamps rather than statuses. Marking a step is idempotent, and
+ * packing implies picking, so a warehouse that does both at once can press one
+ * button.
+ */
+export async function markPickingStage(id: string, stage: "picked" | "packed") {
+  const picking = await prisma.picking.findUniqueOrThrow({
+    where: { id },
+    select: { status: true, type: true, pickedAt: true },
+  });
+
+  if (picking.type !== PickingType.DELIVERY) {
+    throw new StockError("Picking and packing apply to delivery orders only.");
+  }
+  assertPickingEditable(picking.status);
+
+  const now = new Date();
+  await prisma.picking.update({
+    where: { id },
+    data:
+      stage === "picked"
+        ? { pickedAt: now }
+        : { packedAt: now, pickedAt: picking.pickedAt ?? now },
+  });
+
+  return picking.type;
 }
 
 export async function cancelPicking(id: string) {

@@ -120,6 +120,26 @@ export async function validatePickingAction(id: string): Promise<FormState> {
   }
 }
 
+export async function markPickedAction(id: string): Promise<FormState> {
+  try {
+    await requireUser();
+    revalidatePicking(await service.markPickingStage(id, "picked"), id);
+    return formSuccess("Items picked. Pack them next.");
+  } catch (error) {
+    return toFormState(error);
+  }
+}
+
+export async function markPackedAction(id: string): Promise<FormState> {
+  try {
+    await requireUser();
+    revalidatePicking(await service.markPickingStage(id, "packed"), id);
+    return formSuccess("Items packed and ready to despatch. Validate to move the stock.");
+  } catch (error) {
+    return toFormState(error);
+  }
+}
+
 export async function cancelPickingAction(id: string): Promise<FormState> {
   try {
     await requireUser();
