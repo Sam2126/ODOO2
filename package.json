@@ -16,7 +16,9 @@
     "db:seed": "tsx --env-file=.env --conditions=react-server prisma/seed.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "verify": "tsx --env-file=.env --conditions=react-server scripts/verify-flow.ts"
+    "verify": "tsx --env-file=.env --conditions=react-server scripts/verify-flow.ts",
+    "verify:security": "tsx --env-file=.env --conditions=react-server scripts/verify-security.ts",
+    "verify:all": "npm run verify && npm run verify:security"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

@@ -21,6 +21,13 @@ import {
   type FormState,
 } from "@/lib/forms";
 import { sendPasswordResetCode } from "@/lib/mailer";
+import {
+  clearRateLimit,
+  clientIp,
+  LIMITS,
+  rateLimit,
+  retryMessage,
+} from "@/lib/rate-limit";
 import { consumeOtp, issueOtp, OTP_TTL_MINUTES } from "@/lib/otp";
 import {
   changePasswordSchema,
@@ -37,6 +44,10 @@ const safeRedirect = (value: string | undefined) =>
 
 export async function signupAction(_prev: FormState, formData: FormData): Promise<FormState> {
   try {
+    const ip = await clientIp();
+    const gate = rateLimit(`signup:${ip}`, LIMITS.signup.limit, LIMITS.signup.windowSeconds);
+    if (!gate.allowed) return formError(retryMessage(gate.retryAfterSeconds));
+
     const input = signupSchema.parse({
       name: field(formData, "name"),
       email: field(formData, "email"),
@@ -76,10 +87,24 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   let destination = "/dashboard";
 
   try {
+    // Two budgets: one per address, so a botnet cannot spread an attack on a
+    // single account across many IPs, and one per IP so a single host cannot
+    // sweep many accounts.
+    const ip = await clientIp();
+    const byIp = rateLimit(`login-ip:${ip}`, LIMITS.login.limit, LIMITS.login.windowSeconds);
+    if (!byIp.allowed) return formError(retryMessage(byIp.retryAfterSeconds));
+
     const input = loginSchema.parse({
       email: field(formData, "email"),
       password: field(formData, "password"),
     });
+
+    const byEmail = rateLimit(
+      `login-email:${input.email}`,
+      LIMITS.loginPerEmail.limit,
+      LIMITS.loginPerEmail.windowSeconds,
+    );
+    if (!byEmail.allowed) return formError(retryMessage(byEmail.retryAfterSeconds));
 
     const user = await prisma.user.findUnique({
       where: { email: input.email },
@@ -92,6 +117,11 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
     if (!user || !valid) {
       return formError("Those details do not match an account.");
     }
+
+    // A correct password clears the counters, so a few typos followed by the
+    // right password does not leave the account locked out.
+    clearRateLimit(`login-ip:${ip}`);
+    clearRateLimit(`login-email:${input.email}`);
 
     await startSession(user.id);
     destination = safeRedirect(field(formData, "next"));
@@ -112,7 +142,22 @@ export async function requestPasswordResetAction(
   formData: FormData,
 ): Promise<FormState> {
   try {
+    const ip = await clientIp();
+    const byIp = rateLimit(
+      `otp-request-ip:${ip}`,
+      LIMITS.otpRequestPerIp.limit,
+      LIMITS.otpRequestPerIp.windowSeconds,
+    );
+    if (!byIp.allowed) return formError(retryMessage(byIp.retryAfterSeconds));
+
     const input = forgotPasswordSchema.parse({ email: field(formData, "email") });
+
+    const byEmail = rateLimit(
+      `otp-request:${input.email}`,
+      LIMITS.otpRequest.limit,
+      LIMITS.otpRequest.windowSeconds,
+    );
+    if (!byEmail.allowed) return formError(retryMessage(byEmail.retryAfterSeconds));
 
     const user = await prisma.user.findUnique({
       where: { email: input.email },
@@ -148,6 +193,15 @@ export async function resetPasswordAction(
       confirmPassword: field(formData, "confirmPassword") ?? "",
     });
 
+    // Six digits is a million possibilities, which only means anything if
+    // guessing is capped.
+    const gate = rateLimit(
+      `otp-verify:${input.email}`,
+      LIMITS.otpVerify.limit,
+      LIMITS.otpVerify.windowSeconds,
+    );
+    if (!gate.allowed) return formError(retryMessage(gate.retryAfterSeconds));
+
     const user = await prisma.user.findUnique({
       where: { email: input.email },
       select: { id: true },
@@ -164,6 +218,8 @@ export async function resetPasswordAction(
       where: { id: user.id },
       data: { passwordHash: await hashPassword(input.password) },
     });
+
+    clearRateLimit(`otp-verify:${input.email}`);
   } catch (error) {
     return toFormState(error);
   }
@@ -213,6 +269,14 @@ export async function changePasswordAction(
 ): Promise<FormState> {
   try {
     const session = await requireUser();
+
+    const gate = rateLimit(
+      `password-change:${session.id}`,
+      LIMITS.passwordChange.limit,
+      LIMITS.passwordChange.windowSeconds,
+    );
+    if (!gate.allowed) return formError(retryMessage(gate.retryAfterSeconds));
+
     const input = changePasswordSchema.parse({
       currentPassword: field(formData, "currentPassword"),
       password: field(formData, "password"),
