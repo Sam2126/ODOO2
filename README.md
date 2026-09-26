@@ -92,7 +92,9 @@ laptop with no mail setup. Fill them in and real mail is sent through Nodemailer
 | `npm run build` / `npm start` | Production build and serve |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
-| `npm run verify` | **End-to-end check of the inventory flow** (below) |
+| `npm run verify` | **End-to-end check of the inventory flow** (below) — 28 checks |
+| `npm run verify:security` | Rate limiting, session tokens, password hashing — 20 checks |
+| `npm run verify:all` | Both of the above |
 | `npm run db:up` / `db:down` | Start / stop the Postgres container |
 | `npm run db:migrate` | Create and apply a migration |
 | `npm run db:deploy` | Apply existing migrations (CI, production) |
@@ -112,9 +114,12 @@ Step 2 — transfer all 100 to production      WH/Stock 0, WH/Production 100
 Step 3 — deliver 20 to a customer            WH/Production 80
 Step 4 — count the rack, find 77             WH/Production 77
 
+Delivery preparation: mark picked, mark packed, no stock moves until validate
+
 Guard rails: over-delivery refused with nothing written · double validation
 refused · canceling a validated document refused · a receipt from a real
-location refused · counting a virtual location refused
+location refused · picking a receipt refused · counting a virtual location
+refused
 
 Accounting identity: every location sums to zero · real locations hold 77
 ```
@@ -199,6 +204,35 @@ to `proxy.ts`. Both are current as written.
 which this project does not use, and a config-merge package). They are
 devDependencies and not in the runtime bundle; `npm audit fix --force` would
 downgrade to a Prisma 8 release candidate, which is worse.
+
+---
+
+## Security
+
+| Control | How |
+|---|---|
+| Passwords | bcrypt, cost 10, salted per user |
+| Sessions | HS256 JWT in an `httpOnly`, `sameSite=lax` cookie, `secure` in production, 7 days. Carries only the user id, so revoking a role takes effect at once. |
+| Route protection | `proxy.ts` on the Edge for every request, then `requireUser()` again inside the layout |
+| Role enforcement | `requireManager()` in the page *and* the action — hiding a nav link is presentation, not a control |
+| Reset codes | 6 digits from `crypto.randomInt`, stored as a bcrypt digest, 10-minute expiry, single use, and requesting a new one burns the old |
+| Rate limiting | Login, signup, reset requests, reset-code verification and password changes, capped per IP and per account |
+| Account enumeration | Login gives one message for both failure modes; forgot-password always reports success |
+| Input validation | Every form parsed with Zod on the server before it reaches the database |
+| SQL injection | Prisma parameterises everything; no raw SQL in the app |
+| Open redirect | `?next=` accepts relative paths only |
+| Error leakage | Unknown errors are logged server-side and replaced with a generic message |
+| Headers | CSP with `frame-ancestors 'none'`, `form-action 'self'`, `object-src 'none'`; plus nosniff, Referrer-Policy, Permissions-Policy, HSTS in production, and no `X-Powered-By` |
+
+`npm run verify:security` exercises the rate limiter, session signing and
+password hashing directly — 20 checks.
+
+**Two honest limits.** Rate-limit counters live in memory, so a deployment
+running several instances limits per instance; the interface in
+`lib/rate-limit.ts` is ready to sit on Redis. And the CSP allows
+`script-src 'unsafe-inline'`, because Next.js injects its own bootstrap inline
+and the theme script has to run before first paint; moving to a nonce would
+remove that.
 
 ---
 

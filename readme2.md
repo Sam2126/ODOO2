@@ -3,8 +3,8 @@
 Companion to [README.md](README.md). That one tells you how to run the project.
 This one walks through **every file, every table, every decision**.
 
-- **112 files**, ~9,800 lines of TypeScript
-- **29 routes**, 14 database tables, 25 commits
+- **127 files**, ~10,600 lines of TypeScript
+- **29 routes**, 14 database tables, 48 automated checks
 - Next.js 16 · React 19 · Prisma 7 · PostgreSQL 17 · Tailwind 4 · TypeScript 5
 
 ---
@@ -29,6 +29,7 @@ This one walks through **every file, every table, every decision**.
 16. [Testing and verification](#16-testing-and-verification)
 17. [Scripts reference](#17-scripts-reference)
 18. [Known constraints](#18-known-constraints)
+19. [Requirements traceability](#19-requirements-traceability)
 
 ---
 
@@ -202,7 +203,8 @@ stocksense/
 │       └── migration_lock.toml
 │
 ├── scripts/
-│   └── verify-flow.ts            # 23-check end-to-end verification
+│   ├── verify-flow.ts            # 28-check end-to-end verification
+│   └── verify-security.ts        # 20-check security verification
 │
 └── src/
     ├── proxy.ts                  # route protection (Edge runtime)
@@ -211,6 +213,8 @@ stocksense/
     │   ├── layout.tsx            # root layout, fonts, theme bootstrap
     │   ├── globals.css           # design tokens, light + dark
     │   ├── page.tsx              # redirects to /dashboard
+    │   ├── not-found.tsx         # root 404
+    │   ├── global-error.tsx      # error in the root layout itself
     │   │
     │   ├── (auth)/               # signed-out routes
     │   │   ├── layout.tsx        # split-screen brand panel
@@ -223,6 +227,8 @@ stocksense/
     │   │
     │   └── (app)/                # signed-in routes
     │       ├── layout.tsx        # loads user + alerts, renders AppShell
+    │       ├── error.tsx         # page error boundary
+    │       ├── not-found.tsx     # 404 inside the shell
     │       ├── dashboard/page.tsx
     │       ├── products/
     │       │   ├── page.tsx
@@ -251,7 +257,7 @@ stocksense/
     │   ├── action-button.tsx     # button that runs a server action
     │   ├── filters.tsx           # URL-driven filter controls
     │   ├── kpi-tile.tsx
-    │   ├── ui/                   # button, field, badge, card, table, alert, submit-button
+    │   ├── ui/                   # button, field, badge, card, table, alert, submit-button, skeleton
     │   ├── layout/               # app-shell, theme-toggle
     │   ├── documents/            # config, line-editor, picking-*, adjustment-*
     │   ├── products/             # product-form, reorder-rules
@@ -275,6 +281,7 @@ stocksense/
     │   ├── forms.ts              # server-side error mapping
     │   ├── form-state.ts         # client-safe form contract
     │   ├── enums.ts              # Prisma enums without the 46 KB
+    │   ├── rate-limit.ts         # login / OTP / signup throttling
     │   └── utils.ts              # cn, formatQty, formatMoney, dates
     │
     └── server/
@@ -299,7 +306,7 @@ stocksense/
 
 | File | Lines | What it does |
 |---|---|---|
-| `package.json` | 54 | Dependencies and the 14 npm scripts. `postinstall` runs `prisma generate` so a fresh clone or a Vercel build always has a current client. |
+| `package.json` | 54 | Dependencies and the 16 npm scripts. `postinstall` runs `prisma generate` so a fresh clone or a Vercel build always has a current client. |
 | `prisma.config.ts` | 23 | Prisma 7 config. Points at the schema and migrations folder, sets the seed command, and supplies `DATABASE_URL` — which Prisma 7 no longer reads from the schema. Also calls `process.loadEnvFile()` because Prisma 7 does not load `.env` on its own. |
 | `docker-compose.yml` | 21 | PostgreSQL 17 Alpine on **port 5433** (not 5432, to avoid clashing with a local Postgres), with a named volume and a `pg_isready` healthcheck. |
 | `.env.example` | 14 | Template: `DATABASE_URL`, `AUTH_SECRET`, five `SMTP_*` variables. Committed so a clone knows what it needs. |
@@ -342,8 +349,9 @@ Idempotent (`upsert` everywhere) — safe to run repeatedly. Creates:
 
 ### `prisma/migrations/`
 
-Two migrations. `_init` (317 lines of SQL) creates everything;
-`_document_sequence` adds the reference counter table.
+Three migrations. `_init` (317 lines of SQL) creates everything,
+`_document_sequence` adds the reference counter table, and
+`_delivery_pick_pack` adds the two delivery preparation timestamps.
 
 ---
 
@@ -394,7 +402,14 @@ together, plus `quantity`. **Written only by `applyMove`.**
 **`pickings`** — one table for all three document types. `reference` (unique),
 `type` (`RECEIPT` / `DELIVERY` / `INTERNAL`), `status`, `partnerName`,
 `sourceLocationId`, `destLocationId`, `warehouseId`, `scheduledAt`,
-`validatedAt`, `note`, `createdById`.
+`pickedAt`, `packedAt`, `validatedAt`, `note`, `createdById`.
+
+> **Why pick and pack are timestamps, not statuses.** The problem statement
+> describes a delivery as pick items, pack items, validate — but it also fixes
+> the status list the dashboard filters by at Draft / Waiting / Ready / Done /
+> Canceled. Adding PICKED and PACKED would contradict that list, so the two
+> preparation steps are recorded as timestamps inside READY. Neither moves
+> stock.
 
 **`picking_lines`** — `pickingId`, `productId`, `demandQty`, `doneQty`.
 `@@unique([pickingId, productId])` so a product cannot appear twice.
@@ -475,6 +490,7 @@ never reach.
 | `form-state.ts` | 25 | The `FormState` type and `initialFormState`. Zero imports, so client components use this instead of `forms.ts`. |
 | `enums.ts` | 60 | Plain copies of the Prisma enums, typed `as const satisfies Record<T, T>` so they cannot drift from the schema. Saves 46 KB in the browser. |
 | `utils.ts` | 78 | `cn()`, `formatQty`, `formatMoney` (INR), `formatDate`, `formatDateTime`, `uomLabel`. |
+| `rate-limit.ts` | 106 | Fixed-window limiter plus `clientIp()`. Every budget is declared in one `LIMITS` object. In-memory, so it limits per instance — documented in the file. |
 
 ### Three deliberate file splits
 
@@ -739,8 +755,14 @@ Hiding a nav link is presentation. `requireManager` is the enforcement.
 1. `/deliveries/new` — customer, source location, lines. Destination fixed to
    `Partners/Customers`.
 2. **Check availability** → `READY` if everything is on the shelf, `WAITING` if not.
-3. **Validate** → source → Customers. If any line exceeds what is there, the
+3. **Mark picked** → items are off the shelf. Timestamp only; no stock moves.
+4. **Mark packed** → ready to despatch. Packing implies picking, so a warehouse
+   doing both at once can press one button.
+5. **Validate** → source → Customers. If any line exceeds what is there, the
    whole thing is refused and nothing is written.
+
+The strip on the document reads **Draft → Picked → Packed → Shipped** for
+deliveries, and **Draft → Ready → Received/Transferred** for the other two.
 
 ### Internal transfer
 
@@ -785,7 +807,7 @@ honoured.
 
 ## 16. Testing and verification
 
-### `scripts/verify-flow.ts` — 275 lines, 23 checks
+### `scripts/verify-flow.ts` — 28 checks
 
 Drives the **real services** through the problem statement's scenario, on a
 throwaway SKU, cleaning up after itself.
@@ -797,15 +819,43 @@ Step 3 — deliver 20          → Production 80, customers 20
 Step 4 — count 77            → 1 product corrected, Production 77, ref ADJ/#####
 Ledger                       → exactly 4 movements
 
+Delivery prep  mark picked, mark packed, no stock moves until validate
+
 Guard rails
   over-delivery refused · stock untouched · no partial movements written
   document still DRAFT · availability marks it WAITING
   double validation refused · cancelling a validated document refused
-  a receipt from a real location refused · counting a virtual location refused
+  a receipt from a real location refused · picking a receipt refused
+  counting a virtual location refused
 
 Accounting identity
   every location sums to zero · real locations hold 77
 ```
+
+### `scripts/verify-security.ts` — 20 checks
+
+```
+Rate limiting     attempt over the limit blocked - retry delay reported
+                  a correct password clears the lockout
+                  other accounts keep their own budget
+                  reset-code guessing capped at 5 - window expiry honoured
+
+Session tokens    valid token round-trips - missing rejected - garbage rejected
+                  tampered signature rejected
+                  token signed with another key rejected
+
+Password hashing  hash is not the password - bcrypt digest
+                  right password verifies - wrong one does not - salted
+```
+
+### A regression these caught
+
+Adding a blanket `loading.tsx` under `(app)` opened a Suspense boundary, which
+makes Next.js start streaming — and the HTTP status is fixed at 200 once the
+first byte is sent. Every missing record then answered **200 instead of 404**,
+while still rendering the correct Not-found page, so it was invisible in a
+browser. Skeletons now live only on segments with no `notFound()` beneath
+them, and the constraint is written down in `components/ui/skeleton.tsx`.
 
 ### What was verified during the build
 
@@ -817,6 +867,9 @@ Accounting identity
 - Staff bounced from `/settings/*`; manager links hidden from their sidebar
 - **Client bundle audited**: no `DATABASE_URL`, `AUTH_SECRET`, bcrypt, Prisma
   adapter or Prisma metadata in any chunk
+- **Security headers served**: all five present on a live response
+- **Status codes correct**: 404 for a missing record on every detail route,
+  200 for every real one
 
 ---
 
@@ -829,7 +882,9 @@ Accounting identity
 | `npm start` | Serve the build |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
-| `npm run verify` | The 23-check end-to-end verification |
+| `npm run verify` | The 28-check inventory-flow verification |
+| `npm run verify:security` | The 20-check security verification |
+| `npm run verify:all` | Both |
 | `npm run db:up` / `db:down` | Start / stop the Postgres container |
 | `npm run db:migrate` | Create and apply a migration (dev) |
 | `npm run db:deploy` | Apply existing migrations (CI, production) |
@@ -870,3 +925,99 @@ guarded on `consumedAt: null`. There is no optimistic locking on document
 the React Server Component boundary, so query functions convert to `number`
 before returning. Precision is preserved in the database and in all arithmetic;
 the conversion happens only for display.
+
+---
+
+## 19. Requirements traceability
+
+Every line of the problem statement, and where it is implemented. This is the
+table to read with the PDF open beside it.
+
+### Authentication
+
+| Requirement | Where |
+|---|---|
+| The user signs up / logs in | `/signup`, `/login` · `server/actions/auth.ts` |
+| OTP-based password reset | `/forgot-password`, `/reset-password` · `lib/otp.ts`, `lib/mailer.ts` |
+| Redirected to Inventory Dashboard | `proxy.ts` and `app/page.tsx` both send you to `/dashboard` |
+
+### Dashboard KPIs
+
+| Requirement | Where |
+|---|---|
+| Total Products in Stock | `getDashboardData` → `productsInStock`, with total units and product count |
+| Low Stock / Out of Stock Items | Two separate tiles, driven by `stockLevel()` against each reorder rule |
+| Pending Receipts | Count of `RECEIPT` documents in Draft / Waiting / Ready |
+| Pending Deliveries | Same for `DELIVERY` |
+| Internal Transfers Scheduled | Same for `INTERNAL`, shown on the deliveries tile |
+
+### Dynamic filters
+
+| Requirement | Where |
+|---|---|
+| By document type: Receipts / Delivery / Internal / Adjustments | `?type=` — all four, adjustments included |
+| By status: Draft, Waiting, Ready, Done, Canceled | `?status=` — exactly these five, and no others were added |
+| By warehouse **or location** | `?warehouse=` and `?location=`; location is the narrower and wins |
+| By product category | `?category=` |
+
+All four live in the URL, so a filtered dashboard can be bookmarked and shared.
+
+### Navigation
+
+| Requirement | Where |
+|---|---|
+| Products: create/update | `/products/new`, `/products/[id]` |
+| Products: stock availability per location | `onHandByLocation()` table on the product page |
+| Products: product categories | `/settings/categories` |
+| Products: reordering rules | Per warehouse, on the product page |
+| Operations: Receipts | `/receipts` |
+| Operations: Delivery Orders | `/deliveries` |
+| Operations: Inventory Adjustment | `/adjustments` |
+| Operations: Move History | `/moves` |
+| Operations: Dashboard | `/dashboard` |
+| Setting: Warehouse | `/settings/warehouses`, with locations |
+| Profile menu: My Profile | `/profile`, in the sidebar footer |
+| Profile menu: Logout | Sidebar footer and the profile page |
+
+### Core features
+
+| Requirement | Where |
+|---|---|
+| Product: Name, SKU/Code, Category, Unit of Measure | `productSchema` and the product form |
+| Product: Initial stock (optional) | Opening-stock fields, booked through `applyMove` so the ledger explains it |
+| Receipt: create, add supplier and products, input quantities, validate → stock increases | `/receipts/new` → **Validate** |
+| Receive 50 units of Steel Rods → stock +50 | Exactly what `npm run verify` step 1 asserts (with 100 kg) |
+| Delivery: **pick items** | **Mark picked** — records `pickedAt`, moves no stock |
+| Delivery: **pack items** | **Mark packed** — records `packedAt` |
+| Delivery: validate → stock decreases | **Validate**, refused if the shelf cannot cover it |
+| Internal transfers: Main → Production, Rack A → Rack B, WH1 → WH2 | `/transfers`, any two internal locations in the warehouse |
+| Each movement logged in the ledger | `StockMove`, append-only, written only by `applyMove` |
+| Adjustments: select product/location, enter counted quantity, auto-update and log | `/adjustments/new`, pre-filled count sheet |
+
+### Additional features
+
+| Requirement | Where |
+|---|---|
+| Alerts for low stock | Topbar badge, dashboard panel, product badges |
+| Multi-warehouse support | Two warehouses seeded; every document, rule and filter is warehouse-aware |
+| SKU search and smart filters | SKU search on `/products`, in the line editor, and filter bars on every list |
+
+### The worked example, end to end
+
+The PDF's four-step example is not just implemented — it is the automated test.
+`npm run verify` runs it on every invocation:
+
+| PDF step | Assertion |
+|---|---|
+| Receive 100 kg steel → +100 | `WH/Stock` holds 100, vendor location shows −100 |
+| Internal transfer to production rack → total unchanged, location updated | `WH/Stock` 0, `WH/Production` 100 |
+| Deliver 20 → −20 | `WH/Production` 80, customers 20 |
+| Adjust 3 damaged → −3 | `WH/Production` 77 |
+| Everything logged in the Stock Ledger | Exactly four movements recorded |
+
+### Deliberately not added
+
+The PDF fixes the status list at Draft / Waiting / Ready / Done / Canceled, so
+`PICKED` and `PACKED` were **not** added as statuses even though the delivery
+process names those steps — they are timestamps inside `READY` instead. Adding
+them would have broken the status filter the same document asks for.
