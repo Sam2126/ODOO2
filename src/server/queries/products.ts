@@ -9,6 +9,8 @@ export type ProductFilters = {
   search?: string;
   categoryId?: string;
   warehouseId?: string;
+  /** Narrower than warehouseId; when both are given, location wins. */
+  locationId?: string;
   /** "low" | "out" | "in" — anything else means no stock filter. */
   stock?: string;
   includeInactive?: boolean;
@@ -68,10 +70,10 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
     },
   });
 
-  const onHand = await sumOnHand(
-    products.map((product) => product.id),
-    filters.warehouseId,
-  );
+  const onHand = await sumOnHand(products.map((product) => product.id), {
+    warehouseId: filters.warehouseId,
+    locationId: filters.locationId,
+  });
 
   const rows = products.map((product) => {
     const mins = product.reorderRules.map((rule) => rule.minQty.toNumber()).filter((n) => n > 0);
@@ -98,8 +100,10 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
   return rows;
 }
 
-/** productId → on-hand quantity across real locations. */
-export async function sumOnHand(productIds: string[], warehouseId?: string) {
+export type StockScope = { warehouseId?: string; locationId?: string };
+
+/** productId → on-hand quantity across real locations, optionally scoped. */
+export async function sumOnHand(productIds: string[], scope: StockScope = {}) {
   if (productIds.length === 0) return new Map<string, number>();
 
   const rows = await prisma.stockQuant.groupBy({
@@ -108,7 +112,13 @@ export async function sumOnHand(productIds: string[], warehouseId?: string) {
       productId: { in: productIds },
       location: {
         type: LocationType.INTERNAL,
-        ...(warehouseId ? { warehouseId } : {}),
+        // A location is inside exactly one warehouse, so the narrower filter
+        // makes the broader one redundant.
+        ...(scope.locationId
+          ? { id: scope.locationId }
+          : scope.warehouseId
+            ? { warehouseId: scope.warehouseId }
+            : {}),
       },
     },
     _sum: { quantity: true },
