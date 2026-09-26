@@ -7,6 +7,7 @@ import { listProducts, listProductsNeedingReorder } from "@/server/queries/produ
 
 export type DashboardFilters = {
   warehouseId?: string;
+  locationId?: string;
   categoryId?: string;
   status?: string;
   docType?: string;
@@ -22,23 +23,34 @@ const asPickingType = (value?: string) =>
   value && value in PickingType ? (value as PickingType) : undefined;
 
 export async function getDashboardData(filters: DashboardFilters = {}) {
-  const warehouseScope = filters.warehouseId ? { warehouseId: filters.warehouseId } : {};
+  // Documents are counted as "touching" a location if either end is it.
+  const documentScope: Prisma.PickingWhereInput = filters.locationId
+    ? {
+        OR: [
+          { sourceLocationId: filters.locationId },
+          { destLocationId: filters.locationId },
+        ],
+      }
+    : filters.warehouseId
+      ? { warehouseId: filters.warehouseId }
+      : {};
 
   const [products, needingReorder, pendingReceipts, pendingDeliveries, scheduledTransfers] =
     await Promise.all([
       listProducts({
         warehouseId: filters.warehouseId,
+        locationId: filters.locationId,
         categoryId: filters.categoryId,
       }),
       listProductsNeedingReorder(),
       prisma.picking.count({
-        where: { type: PickingType.RECEIPT, status: { in: OPEN_STATUSES }, ...warehouseScope },
+        where: { type: PickingType.RECEIPT, status: { in: OPEN_STATUSES }, ...documentScope },
       }),
       prisma.picking.count({
-        where: { type: PickingType.DELIVERY, status: { in: OPEN_STATUSES }, ...warehouseScope },
+        where: { type: PickingType.DELIVERY, status: { in: OPEN_STATUSES }, ...documentScope },
       }),
       prisma.picking.count({
-        where: { type: PickingType.INTERNAL, status: { in: OPEN_STATUSES }, ...warehouseScope },
+        where: { type: PickingType.INTERNAL, status: { in: OPEN_STATUSES }, ...documentScope },
       }),
     ]);
 
@@ -52,7 +64,7 @@ export async function getDashboardData(filters: DashboardFilters = {}) {
   const documentWhere: Prisma.PickingWhereInput = {
     ...(asStatus(filters.status) ? { status: asStatus(filters.status) } : {}),
     ...(asPickingType(filters.docType) ? { type: asPickingType(filters.docType) } : {}),
-    ...warehouseScope,
+    ...documentScope,
   };
 
   const showAdjustments = !filters.docType || filters.docType === "ADJUSTMENT";
@@ -79,9 +91,11 @@ export async function getDashboardData(filters: DashboardFilters = {}) {
       ? prisma.adjustment.findMany({
           where: {
             ...(asStatus(filters.status) ? { status: asStatus(filters.status) } : {}),
-            ...(filters.warehouseId
-              ? { location: { warehouseId: filters.warehouseId } }
-              : {}),
+            ...(filters.locationId
+              ? { locationId: filters.locationId }
+              : filters.warehouseId
+                ? { location: { warehouseId: filters.warehouseId } }
+                : {}),
           },
           orderBy: { createdAt: "desc" },
           take: 8,
@@ -136,12 +150,15 @@ export async function getDashboardData(filters: DashboardFilters = {}) {
 }
 
 /** Units currently held in each real location — the warehouse map on the dashboard. */
-export async function getLocationTotals(warehouseId?: string) {
+export async function getLocationTotals(warehouseId?: string, locationId?: string) {
   const quants = await prisma.stockQuant.groupBy({
     by: ["locationId"],
     where: {
       quantity: { gt: 0 },
-      location: { type: LocationType.INTERNAL, ...(warehouseId ? { warehouseId } : {}) },
+      location: {
+        type: LocationType.INTERNAL,
+        ...(locationId ? { id: locationId } : warehouseId ? { warehouseId } : {}),
+      },
     },
     _sum: { quantity: true },
     _count: { productId: true },

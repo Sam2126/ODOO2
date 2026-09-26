@@ -48,6 +48,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
 
   const filters = {
     warehouseId: one(params.warehouse),
+    locationId: one(params.location),
     categoryId: one(params.category),
     status: one(params.status),
     docType: one(params.type),
@@ -55,7 +56,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
 
   const [data, locationTotals, warehouses, categories] = await Promise.all([
     getDashboardData(filters),
-    getLocationTotals(filters.warehouseId),
+    getLocationTotals(filters.warehouseId, filters.locationId),
     listWarehousesWithLocations(),
     listCategories(),
   ]);
@@ -68,7 +69,13 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
     <>
       <PageHeader
         title={`Good to see you, ${firstName}`}
-        description="Where your stock stands right now, and what is waiting to be processed."
+        description={
+          filters.locationId
+            ? "Scoped to one location: quantities and document counts cover that location only."
+            : filters.warehouseId
+              ? "Scoped to one warehouse."
+              : "Where your stock stands right now, and what is waiting to be processed."
+        }
         actions={
           <>
             <ButtonLink href="/receipts/new" variant="secondary">
@@ -98,6 +105,18 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
             value: warehouse.id,
             label: warehouse.name,
           }))}
+        />
+        <FilterSelect
+          name="location"
+          label="Location"
+          allLabel="All locations"
+          options={warehouses.flatMap((warehouse) =>
+            warehouse.locations.map((location) => ({
+              value: location.id,
+              label: `${location.name} — ${warehouse.name}`,
+            })),
+          )}
+          className="w-full sm:w-56"
         />
         <FilterSelect
           name="category"
@@ -210,7 +229,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
                       <TD>
                         <Link
                           href={`${DOC_HREF[document.kind]}/${document.id}`}
-                          className="tabular font-mono text-[0.8125rem] font-medium text-primary hover:underline"
+                          className="tabular font-mono text-[0.8125rem] font-medium text-accent hover:underline"
                         >
                           {document.reference}
                         </Link>
