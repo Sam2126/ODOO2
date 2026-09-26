@@ -63,16 +63,3 @@ export function toDateInputValue(value: Date | string) {
   const offset = date.getTimezoneOffset();
   return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 10);
 }
-
-/** Builds a querystring from the current params plus an overriding patch. */
-export function buildQuery(
-  current: Record<string, string | undefined>,
-  patch: Record<string, string | undefined>,
-) {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries({ ...current, ...patch })) {
-    if (value !== undefined && value !== "" && value !== "all") params.set(key, value);
-  }
-  const query = params.toString();
-  return query ? `?${query}` : "";
-}

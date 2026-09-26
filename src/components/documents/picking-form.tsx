@@ -103,6 +103,24 @@ export function PickingForm({
     </option>
   ));
 
+  // An internal transfer may deliver into another warehouse — the problem
+  // statement lists "Warehouse 1 to Warehouse 2" — so its destination offers
+  // every warehouse, grouped, while the source stays inside this one.
+  const allLocationOptions = warehouses.map((warehouse) => (
+    <optgroup key={warehouse.id} label={warehouse.name}>
+      {warehouse.locations.map((location) => (
+        <option key={location.id} value={location.id}>
+          {location.name}
+        </option>
+      ))}
+    </optgroup>
+  ));
+
+  const crossWarehouse =
+    config.type === "INTERNAL" &&
+    Boolean(destLocationId) &&
+    !locations.some((location) => location.id === destLocationId);
+
   return (
     <form action={formAction} className="space-y-5">
       {isEdit ? <input type="hidden" name="id" value={document!.id} /> : null}
@@ -199,7 +217,11 @@ export function PickingForm({
             hint={
               config.destMode === "virtual-customer"
                 ? "Outgoing goods always go to the customer location."
-                : undefined
+                : crossWarehouse
+                  ? "Moving into another warehouse. Total stock is unchanged."
+                  : config.type === "INTERNAL"
+                    ? "Any location, including another warehouse."
+                    : undefined
             }
             required
           >
@@ -212,7 +234,7 @@ export function PickingForm({
                 disabled={readOnly}
                 onChange={(event) => setDestLocationId(event.target.value)}
               >
-                {locationOptions}
+                {config.type === "INTERNAL" ? allLocationOptions : locationOptions}
               </Select>
             )}
           </Field>
